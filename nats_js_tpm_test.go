@@ -5,7 +5,13 @@ import (
 	"testing"
 )
 
+func getTempFile() string {
+	return os.TempDir() + "/jskeys.json"
+}
+
 func TestLoadJetStreamEncryptionKeyFromTPM(t *testing.T) {
+	testFile := getTempFile()
+	defer os.Remove(testFile)
 	type args struct {
 		srkPassword   string
 		jsKeydir      string
@@ -18,14 +24,14 @@ func TestLoadJetStreamEncryptionKeyFromTPM(t *testing.T) {
 		clear   bool
 		wantErr bool
 	}{
-		{"TestLoadJetStreamEncryptionKeyFromTPM-Load", args{"", "/tmp/jskeys", "password", 22}, true, false},
-		{"TestLoadJetStreamEncryptionKeyFromTPM-Read", args{"", "/tmp/jskeys", "password", 22}, false, false},
-		{"TestLoadJetStreamEncryptionKeyFromTPM-BadPass", args{"", "/tmp/jskeys", "badpass", 22}, false, true},
+		{"TestLoadJetStreamEncryptionKeyFromTPM-Load", args{"", testFile, "password", 22}, true, false},
+		{"TestLoadJetStreamEncryptionKeyFromTPM-Read", args{"", testFile, "password", 22}, false, false},
+		{"TestLoadJetStreamEncryptionKeyFromTPM-BadPass", args{"", testFile, "badpass", 22}, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.clear {
-				os.RemoveAll(tt.args.jsKeydir)
+				os.Remove(tt.args.jsKeydir)
 			}
 			_, err := LoadJetStreamEncryptionKeyFromTPM(tt.args.srkPassword, tt.args.jsKeydir, tt.args.jsKeyPassword, tt.args.pcr)
 			if (err != nil) != tt.wantErr {
@@ -41,17 +47,21 @@ func TestLoadJetStreamEncryptionKeyFromTPM(t *testing.T) {
 // the second pass will read the keys from disk, decrypt with the TPM (unseal),
 // and return the same key.
 func TestLoadJetStreamEncryptionKeyFromTPMBasic(t *testing.T) {
-	os.RemoveAll("/tmp/jskeys")
-	key, err := LoadJetStreamEncryptionKeyFromTPM("", "/tmp/jskeys", "password", 22)
+	testFile := getTempFile()
+	defer os.Remove(testFile)
+
+	// Create the key file.
+	key1, err := LoadJetStreamEncryptionKeyFromTPM("", testFile, "password", 22)
 	if err != nil {
 		t.Errorf("LoadJetStreamEncryptionKeyFromTPM() failed: %v", err)
 	}
 
-	key2, err := LoadJetStreamEncryptionKeyFromTPM("", "/tmp/jskeys", "password", 22)
+	// Now obtain the newly generated key from the file.
+	key2, err := LoadJetStreamEncryptionKeyFromTPM("", testFile, "password", 22)
 	if err != nil {
 		t.Errorf("LoadJetStreamEncryptionKeyFromTPM() failed: %v", err)
 	}
-	if key != key2 {
+	if key1 != key2 {
 		t.Errorf("Keys should match")
 	}
 }
