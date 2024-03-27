@@ -1,3 +1,5 @@
+//go:build windows
+
 package main
 
 import (
@@ -27,6 +29,7 @@ func TestLoadJetStreamEncryptionKeyFromTPM(t *testing.T) {
 		{"TestLoadJetStreamEncryptionKeyFromTPM-Load", args{"", testFile, "password", 22}, true, false},
 		{"TestLoadJetStreamEncryptionKeyFromTPM-Read", args{"", testFile, "password", 22}, false, false},
 		{"TestLoadJetStreamEncryptionKeyFromTPM-BadPass", args{"", testFile, "badpass", 22}, false, true},
+		//{"TestLoadJetStreamEncryptionKeyFromTPM-BadFile", args{"", "\\win32\\oo.json", "badpass", 22}, true, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
